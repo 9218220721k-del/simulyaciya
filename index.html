@@ -1,0 +1,559 @@
+<!-- ============================================================ -->
+<!-- БЛОК 1: ШАПКА                                               -->
+<!-- ============================================================ -->
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Калькулятор гидравлического и теплового расчёта v10</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="styles.css" rel="stylesheet">
+</head>
+
+<!-- ============================================================ -->
+<!-- БЛОК 2: HTML (ЗАГОЛОВОК И НАСТРОЙКИ ГИДРАВЛИКИ)             -->
+<!-- ============================================================ -->
+<body class="min-h-screen p-4 md:p-8">
+<div class="max-w-7xl mx-auto">
+
+<!-- ========== HEADER ========== -->
+<header class="mb-8">
+    <div class="mb-4 text-center">
+        <h1 class="text-3xl md:text-4xl font-bold text-slate-800">Калькулятор гидравлического и теплового расчёта</h1>
+        <p class="text-slate-500 text-sm mt-2 font-mono">Q<sub>рад</sub>(T<sub>room</sub>) = K<sub>room</sub>·(T<sub>room</sub>−T<sub>out</sub>) — ε-NTU + Ньютон</p>
+        <a href="https://vk.com/otoplenie44" target="_blank" class="author-badge inline-block mt-3" style="padding: 6px 12px; height: 32px; font-size: 0.75rem; border-radius: 8px;">
+            <span>🏗</span>
+            <span>Автор: <strong>Роман Отопление</strong></span>
+            <span style="opacity:0.7; border-left:1px solid rgba(255,255,255,0.3); padding-left:6px; margin-left:2px">vk.com/otoplenie44</span>
+        </a>
+    </div>
+
+    <div class="flex flex-wrap gap-2 items-center justify-center">
+        <button onclick="downloadFullReport()" class="export-btn">
+            💾 Отчёт
+        </button>
+        <button onclick="thawAll()" id="btn-thaw" class="hidden px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm font-semibold transition">
+            🔥 Разморозить всё
+        </button>
+    </div>
+</header>
+
+<!-- ========== МЕНЮ СИМУЛЯЦИИ РАДИАТОРА ========== -->
+<div class="mb-6 rounded-xl border-2 border-slate-200 bg-slate-50 overflow-hidden">
+<button onclick="toggleRadiatorSimulationMenu()" id="btn-radiator-simulation-menu" 
+        class="w-full px-4 py-3 text-left mode-btn rounded-none bg-white text-slate-900 border-b-2 border-slate-200 hover:bg-slate-50 transition-all font-semibold">
+    🔥 Меню Симуляции Радиатора
+</button>
+<div id="radiator-simulation-submenu" class="flex flex-wrap justify-start gap-3 p-4" style="display:none;">
+    <button onclick="setMode('bad')" id="btn-bad" class="mode-btn px-4 py-2 rounded-xl text-sm font-semibold bg-white text-slate-900 border-2 border-slate-300 hover:bg-slate-50 shadow-sm transition-all">❌ Без удл.</button>
+    <button onclick="setMode('good')" id="btn-good" class="mode-btn px-4 py-2 rounded-xl text-sm font-semibold bg-white text-slate-700 border-2 border-slate-200 hover:bg-slate-50 shadow-sm transition-all">✅ С удл.</button>
+    <button onclick="toggleCounterflow()" id="btn-counterflow" class="mode-btn counterflow-btn active px-4 py-2 rounded-xl text-sm font-semibold bg-white text-slate-900 border-2 border-slate-300 shadow-sm transition-all">🔄 Противоток</button>
+    <button onclick="toggleBalance()" id="btn-balance" class="mode-btn px-4 py-2 rounded-xl text-sm font-semibold bg-white border-2 border-amber-300 text-amber-700 hover:bg-amber-50 shadow-sm transition-all">🏠 Тепловой баланс</button>
+    <button onclick="toggleFlowDynamics()" id="btn-flow-dynamics-menu" class="mode-btn px-4 py-2 rounded-xl text-sm font-semibold bg-white border-2 border-pink-300 text-pink-700 hover:bg-pink-50 shadow-sm transition-all">🌊 Динамика потока</button>
+    <button onclick="toggleCanvas()" id="btn-canvas" class="mode-btn px-4 py-2 rounded-xl text-sm font-semibold bg-white border-2 border-indigo-300 text-indigo-700 hover:bg-indigo-50 shadow-sm transition-all">🖼 Визуализация</button>
+    <button onclick="toggleCollector()" id="btn-collector" class="mode-btn px-4 py-2 rounded-xl text-sm font-semibold bg-white border-2 border-orange-300 text-orange-700 hover:bg-orange-50 shadow-sm transition-all">🔥 Коллектор обратки</button>
+    <button onclick="toggleMetrics()" id="btn-metrics" class="mode-btn px-4 py-2 rounded-xl text-sm font-semibold bg-white border-2 border-teal-300 text-teal-700 hover:bg-teal-50 shadow-sm transition-all">📊 Метрики</button>
+    <button onclick="toggleSections()" id="btn-sections" class="mode-btn px-4 py-2 rounded-xl text-sm font-semibold bg-white border-2 border-violet-300 text-violet-700 hover:bg-violet-50 shadow-sm transition-all">📋 Секции</button>
+    <button onclick="toggleAnalysis()" id="btn-analysis" class="mode-btn px-4 py-2 rounded-xl text-sm font-semibold bg-white border-2 border-slate-300 text-slate-700 hover:bg-slate-50 shadow-sm transition-all">💡 Анализ</button>
+    <button onclick="toggleSectionControls()" id="btn-section-controls" class="mode-btn px-4 py-2 rounded-xl text-sm font-semibold bg-white border-2 border-sky-300 text-sky-700 hover:bg-sky-50 shadow-sm transition-all">⚙ Клапаны секций</button>
+</div>
+</div>
+
+<!-- ========== РАВНОВЕСНАЯ ТЕМПЕРАТУРА ========== -->
+<div id="balance-result" class="metric-card balance-card mb-6" style="display:none;">
+<div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
+<div class="text-center md:col-span-2">
+<div class="text-sm font-bold text-amber-800 mb-1">🏠 РАВНОВЕСНАЯ ТЕМПЕРАТУРА</div>
+<div class="stat-value-lg text-amber-900" id="equilibrium-temp">--°C</div>
+<div class="text-xs text-amber-700 mt-1" id="comfort-status">Расчёт...</div>
+</div>
+<div class="text-center">
+<div class="text-xs text-amber-700">Q<sub>радиатора</sub></div>
+<div class="stat-value text-orange-600" id="q-radiator">-- Вт</div>
+</div>
+<div class="text-center">
+<div class="text-xs text-amber-700">Q<sub>теплопотерь</sub></div>
+<div class="stat-value text-blue-600" id="q-losses">-- Вт</div>
+</div>
+</div>
+<div class="mt-3 text-xs text-amber-800 bg-amber-100 rounded-lg p-2" id="balance-equation"></div>
+</div>
+
+<!-- ========== УПРАВЛЕНИЕ ЧАСТИЦАМИ И ТЕПЛОПОТЕРЯМИ ========== -->
+<div id="flow-dynamics-section" class="metric-card mb-6" style="display:none; background:linear-gradient(135deg,#fce7f3,#fbcfe8);border:2px solid #db2777;">
+<div class="flex flex-wrap items-center justify-between gap-4 mb-4">
+<div class="flex items-center gap-4">
+<div class="text-sm font-bold text-pink-800">🌊 ПАРАМЕТРЫ ДИНАМИКИ ПОТОКА</div>
+<div class="text-xs text-pink-600">Регулируемые коэффициенты для симуляции частиц</div>
+</div>
+<div class="flex items-center gap-3">
+<span class="text-sm font-mono text-purple-700" id="total-particles-display">≈250 частиц</span>
+</div>
+</div>
+<div id="flow-dynamics-content">
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+<div class="bg-white rounded-lg p-4 border-2 border-pink-300">
+<label class="text-sm font-bold text-pink-900 mb-2 block">🔥 Коэффициент теплопотерь</label>
+<div class="text-xs text-pink-700 mb-2">°C/кадр при движении</div>
+<input type="range" id="heat-loss-coeff" min="0" max="0.1" step="0.005" value="0.03" class="w-full">
+<div class="text-center mt-2">
+<div class="stat-value text-pink-700" id="heat-loss-display">0.030</div>
+<div class="text-xs text-pink-600">Остывание при противотоке</div>
+</div>
+</div>
+<div class="bg-white rounded-lg p-4 border-2 border-purple-300">
+<label class="text-sm font-bold text-purple-900 mb-2 block">💧 Частиц на литр</label>
+<div class="text-xs text-purple-700 mb-2">Динамическое количество</div>
+<input type="range" id="particles-per-liter" min="10" max="200" step="10" value="50" class="w-full">
+<div class="text-center mt-2">
+<div class="stat-value text-purple-700" id="particles-per-liter-display">50</div>
+<div class="text-xs text-purple-600">шт/литр</div>
+</div>
+</div>
+<div class="bg-white rounded-lg p-4 border-2 border-indigo-300">
+<label class="text-sm font-bold text-indigo-900 mb-2 block">⬇️ Сила гравитации</label>
+<div class="text-xs text-indigo-700 mb-2">для холодных частиц</div>
+<input type="range" id="gravity-force" min="0" max="0.10" step="0.005" value="0.03" class="w-full">
+<div class="text-center mt-2">
+<div class="stat-value text-indigo-700" id="gravity-force-display">0.030</div>
+<div class="text-xs text-indigo-600">пиксель/кадр²</div>
+</div>
+</div>
+</div>
+<div class="mt-3 text-xs text-slate-700 bg-slate-50 rounded-lg p-3 border border-slate-200">
+<strong>📊 Статистика частиц:</strong>
+<span id="particle-stats" class="font-mono">Ожидание инициализации...</span>
+</div>
+</div>
+</div>
+
+<!-- ========== МЕНЮ ГИДРАВЛИКИ ========== -->
+<div class="mb-6 rounded-xl border-2 border-slate-200 bg-slate-50 overflow-hidden">
+<button onclick="toggleHydraulicsMenu()" id="btn-hydraulics-menu" 
+        class="w-full px-4 py-3 text-left mode-btn rounded-none bg-white text-slate-900 border-b-2 border-slate-200 hover:bg-slate-50 transition-all font-semibold">
+    ⚙ Меню Гидравлики
+</button>
+<div id="hydraulics-submenu" class="flex flex-wrap justify-start gap-3 p-4" style="display:none;">
+    <button onclick="toggleResistance()" id="btn-resistance" class="mode-btn px-6 py-3 rounded-xl text-sm font-semibold bg-white border-2 border-sky-300 text-sky-700 hover:bg-sky-50 shadow-sm transition-all">
+        💧 Сопротивление (Трубы)
+    </button>
+    <button onclick="toggleRiser()" id="btn-riser" class="mode-btn px-6 py-3 rounded-xl text-sm font-semibold bg-white border-2 border-purple-300 text-purple-700 hover:bg-purple-50 shadow-sm transition-all">
+        🏢 Расчёт Стояка
+    </button>
+</div>
+</div>
+
+<!-- ========== ГИДРАВЛИКА ========== -->
+<div class="metric-card mb-6" id="hydraulic-section" style="display:none; background:linear-gradient(135deg,#e0f2fe,#bae6fd);border:2px solid #0284c7;transition:all .3s ease;">
+<div class="text-center mb-3">
+<div class="text-sm font-bold text-sky-800">⚙ ГИДРАВЛИЧЕСКОЕ СОПРОТИВЛЕНИЕ СИСТЕМЫ</div>
+<div class="text-xs text-sky-600">Труба 3/4" • Байпас 1/2" • Краны • При расходе G = const</div>
+</div>
+<div class="bg-white rounded-lg p-4 mb-4 border-2 border-sky-300">
+<div class="text-sm font-bold text-sky-900 mb-3">📐 ПАРАМЕТРЫ ДЛЯ РАСЧЁТА</div>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+<div class="bg-sky-50 rounded-lg p-3 border border-sky-200">
+<div class="text-xs font-bold text-sky-700 mb-2">🔧 ОСНОВНАЯ ТРУБА 3/4"</div>
+<div class="flex items-center gap-2 mb-2"><label class="text-xs text-slate-600 w-24">Диаметр (мм):</label><input type="number" id="main-pipe-d" value="20.4" step="0.1" class="power-input w-20" onchange="updateHydroParams()"></div>
+<div class="flex items-center gap-2"><label class="text-xs text-slate-600 w-24">Длина (м):</label><input type="number" id="main-pipe-L" value="2.0" step="0.1" class="power-input w-20" onchange="updateHydroParams()"></div>
+</div>
+<div class="bg-orange-50 rounded-lg p-3 border border-orange-200">
+<div class="text-xs font-bold text-orange-700 mb-2">◆ БАЙПАС 1/2"</div>
+<div class="flex items-center gap-2 mb-2"><label class="text-xs text-slate-600 w-24">Диаметр (мм):</label><input type="number" id="bypass-pipe-d" value="15.6" step="0.1" class="power-input w-20" onchange="updateHydroParams()"></div>
+<div class="flex items-center gap-2"><label class="text-xs text-slate-600 w-24">Длина (м):</label><input type="number" id="bypass-pipe-L" value="1.0" step="0.1" class="power-input w-20" onchange="updateHydroParams()"></div>
+</div>
+<div class="bg-green-50 rounded-lg p-3 border border-green-200">
+<div class="text-xs font-bold text-green-700 mb-2">🔥 ПОДВОДКА К РАДИАТОРУ</div>
+<div class="flex items-center gap-2 mb-2"><label class="text-xs text-slate-600 w-24">Диаметр (мм):</label><input type="number" id="rad-pipe-d" value="20.4" step="0.1" class="power-input w-20" onchange="updateHydroParams()"></div>
+<div class="flex items-center gap-2"><label class="text-xs text-slate-600 w-24">Длина (м):</label><input type="number" id="rad-pipe-L" value="1.5" step="0.1" class="power-input w-20" onchange="updateHydroParams()"></div>
+</div>
+<div class="bg-purple-50 rounded-lg p-3 border border-purple-200">
+<div class="text-xs font-bold text-purple-700 mb-2">🔧 КРАН 3/4" (открыт)</div>
+<div class="flex items-center gap-2"><label class="text-xs text-slate-600 w-24">Коэф. ζ:</label><input type="number" id="valve-34-zeta" value="0.3" step="0.1" class="power-input w-20" onchange="updateHydroParams()"></div>
+</div>
+<div class="bg-purple-50 rounded-lg p-3 border border-purple-200">
+<div class="text-xs font-bold text-purple-700 mb-2">🔧 КРАН 1/2" (открыт)</div>
+<div class="flex items-center gap-2"><label class="text-xs text-slate-600 w-24">Коэф. ζ:</label><input type="number" id="valve-12-zeta" value="0.5" step="0.1" class="power-input w-20" onchange="updateHydroParams()"></div>
+</div>
+<div class="bg-purple-50 rounded-lg p-3 border border-purple-200">
+<div class="text-xs font-bold text-purple-700 mb-2">🔀 ТРОЙНИК</div>
+<div class="flex items-center gap-2"><label class="text-xs text-slate-600 w-24">Коэф. ζ:</label><input type="number" id="tee-zeta" value="1.5" step="0.1" class="power-input w-20" onchange="updateHydroParams()"></div>
+</div>
+<div class="bg-red-50 rounded-lg p-3 border border-red-200">
+<div class="text-xs font-bold text-red-700 mb-2">🔥 РАДИАТОР</div>
+<div class="flex items-center gap-2"><label class="text-xs text-slate-600 w-24">Коэф. ζ:</label><input type="number" id="radiator-zeta" value="3.0" step="0.1" class="power-input w-20" onchange="updateHydroParams()"></div>
+</div>
+<div class="bg-blue-50 rounded-lg p-3 border border-blue-200">
+<div class="text-xs font-bold text-blue-700 mb-2">💧 ПАРАМЕТРЫ ВОДЫ</div>
+<div class="flex items-center gap-2 mb-2"><label class="text-xs text-slate-600 w-24">Плотность ρ:</label><input type="number" id="water-rho" value="985" step="1" class="power-input w-20" onchange="updateHydroParams()"><span class="text-xs text-slate-500">кг/м³</span></div>
+<div class="flex items-center gap-2"><label class="text-xs text-slate-400 w-24"><s>Коэф. λ:</s></label><input type="number" id="water-lambda" value="0.025" step="0.001" class="power-input w-20 opacity-40" disabled><span class="text-xs text-green-600 font-bold ml-1">авто (Re)</span></div>
+</div>
+<div class="bg-blue-50 rounded-lg p-3 border border-blue-200">
+<div class="text-xs font-bold text-blue-700 mb-2">📋 ДОПОЛНИТЕЛЬНО</div>
+<div class="flex items-center gap-2 mb-2"><label class="text-xs text-slate-600 w-24">Вязкость ν:</label><input type="number" id="water-nu" value="0.415" step="0.001" class="power-input w-20" onchange="updateHydroParams()"><span class="text-xs text-slate-500">×10⁻⁶</span></div>
+<div class="flex items-center gap-2"><label class="text-xs text-slate-600 w-24">g (м/с²):</label><input type="number" id="water-g" value="9.81" step="0.01" class="power-input w-20" onchange="updateHydroParams()"></div>
+</div>
+</div>
+<div class="mt-3 flex justify-end"><button onclick="resetHydroParams()" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-sm font-semibold transition">🔄 Сбросить по умолчанию</button></div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
+<div class="bg-white rounded-lg p-3 border border-sky-200">
+<div class="text-xs font-bold text-orange-700 mb-2">◆ ПУТЬ ЧЕРЕЗ БАЙПАС</div>
+<div class="text-sm font-mono text-sky-700">Расход: <span class="font-bold" id="bypass-flow-hydro">--</span> л/мин</div>
+<div class="text-sm font-mono text-sky-700">Скорость: <span id="bypass-velocity">--</span> м/с</div>
+<div class="text-sm font-mono text-red-600">Потери: <span class="font-bold" id="bypass-h-total">--</span> м.в.ст</div>
+<div class="text-xs text-slate-500 mt-1">трение: <span id="bypass-h-friction">--</span> м.в.ст<br>местные: <span id="bypass-h-local">--</span> м.в.ст</div>
+<div class="text-xs text-teal-600 mt-1">Re=<span id="bypass-Re">--</span> λ=<span id="bypass-lambda">--</span></div>
+</div>
+<div class="bg-white rounded-lg p-3 border border-sky-200">
+<div class="text-xs font-bold text-green-700 mb-2">🔥 ПУТЬ ЧЕРЕЗ РАДИАТОР</div>
+<div class="text-sm font-mono text-sky-700">Расход: <span class="font-bold" id="rad-flow-hydro">--</span> л/мин</div>
+<div class="text-sm font-mono text-sky-700">Скорость: <span id="rad-velocity">--</span> м/с</div>
+<div class="text-sm font-mono text-red-600">Потери: <span class="font-bold" id="rad-h-total">--</span> м.в.ст</div>
+<div class="text-xs text-slate-500 mt-1">трение: <span id="rad-h-friction">--</span> м.в.ст<br>местные: <span id="rad-h-local">--</span> м.в.ст</div>
+<div class="text-xs text-teal-600 mt-1">Re=<span id="rad-Re">--</span> λ=<span id="rad-lambda">--</span></div>
+</div>
+<div class="bg-gradient-to-br from-amber-50 to-orange-50 rounded-lg p-3 border-2 border-orange-400">
+<div class="text-xs font-bold text-orange-800 mb-2">📊 СИСТЕМА ЦЕЛИКОМ</div>
+<div class="text-sm font-mono text-sky-700">Расход: <span class="font-bold" id="system-flow-hydro">--</span> л/мин</div>
+<div class="text-lg font-mono font-bold text-red-600 mt-1">ΔP = <span id="system-h-current">--</span></div>
+<div class="text-xs text-slate-600 mt-1">м.в.ст (текущее)</div>
+<div class="text-xs text-slate-500 mt-2">исходное: <span id="system-h-initial">--</span> м.в.ст<br>изменение: <span class="font-bold" id="system-h-ratio">--×</span></div>
+</div>
+</div>
+<div class="mt-3 text-xs text-sky-800 bg-sky-100 rounded-lg p-2" id="resistance-equation"></div>
+</div>
+
+<!-- ========== РАСЧЁТ СТОЯКА ========== -->
+<div class="riser-section" id="riser-calc-section" style="display:none;">
+<div class="text-center mb-4">
+<div class="text-lg font-bold text-purple-800">🏢 РАСЧЁТ СТОЯКА — ОДНОТРУБНАЯ СИСТЕМА</div>
+<div class="text-xs text-purple-600">5 этажей • 10 радиаторов • Верхняя разводка • Перемычки (байпасы) на каждом радиаторе</div>
+</div>
+<div class="bg-white rounded-lg p-4 mb-4 border border-purple-300">
+<div class="text-sm font-bold text-purple-800 mb-3">📐 ПАРАМЕТРЫ СТОЯКА</div>
+<div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
+<div>
+<div class="text-xs text-slate-600 mb-1">Т подачи стояка</div>
+<input type="number" id="riser-supply-temp" value="80" min="40" max="95" step="1" class="riser-param-input" onchange="calcRiser()">
+<span class="text-xs text-slate-500">°C</span>
+</div>
+<div>
+<div class="text-xs text-slate-600 mb-1">Расход стояка</div>
+<input type="number" id="riser-flow" value="6" min="1" max="30" step="0.5" class="riser-param-input" onchange="calcRiser()">
+<span class="text-xs text-slate-500">л/мин</span>
+</div>
+<div>
+<div class="text-xs text-slate-600 mb-1">Мощн. рад.</div>
+<input type="number" id="riser-rad-power" value="1500" min="500" max="5000" step="100" class="riser-param-input" onchange="calcRiser()">
+<span class="text-xs text-slate-500">Вт</span>
+</div>
+<div>
+<div class="text-xs text-slate-600 mb-1">Т комнаты</div>
+<input type="number" id="riser-room-temp" value="20" min="10" max="30" step="1" class="riser-param-input" onchange="calcRiser()">
+<span class="text-xs text-slate-500">°C</span>
+</div>
+<div>
+<div class="text-xs text-slate-600 mb-1">Стояк ⌀ (мм)</div>
+<input type="number" id="riser-pipe-d" value="25.4" min="15" max="40" step="0.1" class="riser-param-input" onchange="calcRiser()">
+<span class="text-xs text-slate-500">мм</span>
+</div>
+<div>
+<div class="text-xs text-slate-600 mb-1">Байпас ⌀ (мм)</div>
+<input type="number" id="riser-bypass-d" value="20.4" min="10" max="32" step="0.1" class="riser-param-input" onchange="calcRiser()">
+<span class="text-xs text-slate-500">мм</span>
+</div>
+</div>
+<div class="mt-3 flex gap-3 flex-wrap">
+<button onclick="riserOpenAll()" class="px-3 py-1.5 bg-green-500 hover:bg-green-600 text-white rounded-lg text-xs font-semibold transition">✅ Открыть все перемычки</button>
+<button onclick="riserCloseAll()" class="px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white rounded-lg text-xs font-semibold transition">🚫 Закрыть все перемычки</button>
+<button onclick="riserCloseOne()" class="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-xs font-semibold transition">⚠ Закрыть 1 перемычку (5-й этаж)</button>
+</div>
+</div>
+<div class="grid grid-cols-2 md:grid-cols-4 gap-2 mb-3">
+<div class="riser-summary-card">
+<div class="text-xs text-purple-600 mb-1">Расход стояка</div>
+<div class="stat-value text-purple-800" id="riser-total-flow">--</div>
+<div class="text-xs text-slate-500">л/мин</div>
+</div>
+<div class="riser-summary-card">
+<div class="text-xs text-purple-600 mb-1">ΔT стояка</div>
+<div class="stat-value text-red-600" id="riser-delta-t">--</div>
+<div class="text-xs text-slate-500">°C (подача→обратка)</div>
+</div>
+<div class="riser-summary-card">
+<div class="text-xs text-purple-600 mb-1">Падение расхода</div>
+<div class="stat-value text-orange-600" id="riser-flow-drop">--</div>
+<div class="text-xs text-slate-500">% при закрытии</div>
+</div>
+<div class="riser-summary-card">
+<div class="text-xs text-purple-600 mb-1">Т обратки стояка</div>
+<div class="stat-value text-blue-600" id="riser-return-temp">--</div>
+<div class="text-xs text-slate-500">°C</div>
+</div>
+</div>
+<div class="mb-4 rounded-xl border-2 border-purple-200 bg-purple-50 overflow-hidden">
+<button onclick="toggleRiserFloors()" id="btn-riser-floors" class="w-full px-4 py-3 text-left mode-btn rounded-none bg-white text-purple-800 border-b-2 border-purple-200 hover:bg-purple-50 transition-all font-semibold">🏢 Радиаторы по этажам (сверху вниз по стояку)</button>
+<div id="riser-floors-section" class="bg-white p-4" style="display:block;">
+<div class="riser-floor-row floor-header">
+<div>Этаж</div>
+<div>Температура на входе → выходе</div>
+<div>Расход</div>
+<div>Мощность</div>
+<div>Перемычка</div>
+<div>Статус</div>
+</div>
+<div id="riser-floors-container"></div>
+</div>
+</div>
+<div class="mb-4 rounded-xl border-2 border-purple-200 bg-purple-50 overflow-hidden">
+<button onclick="toggleRiserFormulas()" id="btn-riser-formulas" class="w-full px-4 py-3 text-left mode-btn rounded-none bg-white text-purple-800 border-b-2 border-purple-200 hover:bg-purple-50 transition-all font-semibold">📋 Сводка и методика</button>
+<div id="riser-formulas-section" class="text-xs text-purple-800 bg-purple-100 p-4" style="display:none;">
+<div id="riser-verdict" class="mb-4"></div>
+<strong>Методика:</strong> Последовательный расчёт по стояку. Теплоноситель входит в 1-й радиатор, отдаёт тепло (Q = G·Cp·ΔT), остывший поток поступает на следующий.<br>
+При закрытии перемычки — весь расход идёт через радиатор (ζ_рад >> ζ_байпас), сопротивление узла растёт → расход по стояку падает.<br>
+<strong>Формулы:</strong> T<sub>вых_i</sub> = T<sub>вх_i</sub> − Q<sub>i</sub> / (G<sub>i</sub> · C<sub>p</sub>), где Q<sub>i</sub> = ε<sub>i</sub> · G<sub>i</sub> · C<sub>p</sub> · (T<sub>вх_i</sub> − T<sub>комн</sub>)<br>
+<strong>Распределение потока в узле:</strong> k<sub>i</sub> = A<sub>i</sub> / √ζ<sub>i</sub> (турбулентный режим). Доля радиатора: f<sub>рад</sub> = k<sub>рад</sub> / (k<sub>рад</sub> + k<sub>бп</sub>).<br>
+<strong>Сопротивление узла (привед. к стояку):</strong> ζ<sub>экв</sub> = A<sub>стояк</sub>² / (k<sub>бп</sub> + k<sub>рад</sub>)² — параллельная комбинация байпаса и радиатора.<br>
+<strong>λ трения:</strong> Коулбрук-Уайт (аппроксимация Свамии-Джайна), шерох. ε = 0.15 мм (сталь). λ = f(Re, ε/d). Переходный режим Re 2320–4000: линейная интерполяция.<br>
+<strong>Потери в стояке:</strong> ΔT<sub>труба</sub> = U·π·d·L·(T<sub>ср</sub> − T<sub>комн</sub>) / (G·C<sub>p</sub>), U = 10 Вт/(м²·К).<br>
+<strong>Подводка к радиатору:</strong> d<sub>подводки</sub> = d<sub>rad_pipe</sub> (из параметров гидравлики), не d<sub>стояка</sub>
+</div>
+</div>
+<!-- ========== КРАНЫ НА БАЙПАСАХ 1/2" ========== -->
+<div class="mb-4 rounded-xl border-2 border-purple-200 bg-purple-50 overflow-hidden">
+<button onclick="toggleSixRadBypassControls()" id="btn-six-rad-bypass-controls" class="w-full px-4 py-3 text-left mode-btn rounded-none bg-white text-purple-800 border-b-2 border-purple-200 hover:bg-purple-50 transition-all font-semibold">◆ Краны на байпасах 1/2" (рад. 1–6)</button>
+<div id="six-rad-bypass-controls-section" class="metric-card mb-0 rounded-none p-4" style="display:none;">
+<div class="grid grid-cols-3 md:grid-cols-6 gap-3 mb-3">
+<div class="text-center"><div class="text-xs text-slate-600 mb-1">Рад. 1</div><input type="range" id="six-rad-bypass-0" min="0" max="100" value="100" class="w-full" oninput="setSixRadBypassPct(0, this.value); calcRiser()"><div class="text-xs font-mono text-purple-700" id="six-rad-bypass-val-0">100%</div></div>
+<div class="text-center"><div class="text-xs text-slate-600 mb-1">Рад. 2</div><input type="range" id="six-rad-bypass-1" min="0" max="100" value="100" class="w-full" oninput="setSixRadBypassPct(1, this.value); calcRiser()"><div class="text-xs font-mono text-purple-700" id="six-rad-bypass-val-1">100%</div></div>
+<div class="text-center"><div class="text-xs text-slate-600 mb-1">Рад. 3</div><input type="range" id="six-rad-bypass-2" min="0" max="100" value="100" class="w-full" oninput="setSixRadBypassPct(2, this.value); calcRiser()"><div class="text-xs font-mono text-purple-700" id="six-rad-bypass-val-2">100%</div></div>
+<div class="text-center"><div class="text-xs text-slate-600 mb-1">Рад. 4</div><input type="range" id="six-rad-bypass-3" min="0" max="100" value="100" class="w-full" oninput="setSixRadBypassPct(3, this.value); calcRiser()"><div class="text-xs font-mono text-purple-700" id="six-rad-bypass-val-3">100%</div></div>
+<div class="text-center"><div class="text-xs text-slate-600 mb-1">Рад. 5</div><input type="range" id="six-rad-bypass-4" min="0" max="100" value="100" class="w-full" oninput="setSixRadBypassPct(4, this.value); calcRiser()"><div class="text-xs font-mono text-purple-700" id="six-rad-bypass-val-4">100%</div></div>
+<div class="text-center"><div class="text-xs text-slate-600 mb-1">Рад. 6</div><input type="range" id="six-rad-bypass-5" min="0" max="100" value="100" class="w-full" oninput="setSixRadBypassPct(5, this.value); calcRiser()"><div class="text-xs font-mono text-purple-700" id="six-rad-bypass-val-5">100%</div></div>
+</div>
+<div class="flex gap-2"><button type="button" onclick="sixRadBypassAllOpen()" class="px-3 py-1.5 bg-green-500 hover:bg-green-600 text-white rounded-lg text-xs font-semibold transition">Все 100%</button><button type="button" onclick="sixRadBypassAllClosed()" class="px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white rounded-lg text-xs font-semibold transition">Все 0%</button></div>
+</div>
+</div>
+<!-- ========== РАЗМЕРЫ 6 РАДИАТОРОВ ========== -->
+<div class="mb-4 rounded-xl border-2 border-purple-200 bg-purple-50 overflow-hidden">
+<button onclick="toggleSixRadSizeControls()" id="btn-six-rad-size-controls" class="w-full px-4 py-3 text-left mode-btn rounded-none bg-white text-purple-800 border-b-2 border-purple-200 hover:bg-purple-50 transition-all font-semibold">📐 Размеры и позиция</button>
+<div id="six-rad-size-controls-section" class="metric-card mb-0 rounded-none p-4 flex flex-wrap items-center gap-6" style="display:none;">
+<div class="flex items-center gap-2"><span class="text-xs text-slate-500 uppercase">Ширина canvas</span><button type="button" onclick="adjustSixRadCanvasWidth(-50)" class="px-3 py-1 rounded-lg bg-slate-200 hover:bg-slate-300 font-bold text-slate-700">−</button><input type="number" id="six-rad-canvas-width" value="1600" min="1000" max="2000" step="50" class="w-20 power-input text-center" oninput="applySixRadCanvasWidth()"><button type="button" onclick="adjustSixRadCanvasWidth(50)" class="px-3 py-1 rounded-lg bg-slate-200 hover:bg-slate-300 font-bold text-slate-700">+</button><span class="text-xs text-slate-500">px</span></div>
+<div class="flex items-center gap-2"><span class="text-xs text-slate-500 uppercase">Высота canvas</span><button type="button" onclick="adjustSixRadCanvasHeight(-50)" class="px-3 py-1 rounded-lg bg-slate-200 hover:bg-slate-300 font-bold text-slate-700">−</button><input type="number" id="six-rad-canvas-height" value="850" min="600" max="1200" step="50" class="w-20 power-input text-center" oninput="applySixRadCanvasHeight()"><button type="button" onclick="adjustSixRadCanvasHeight(50)" class="px-3 py-1 rounded-lg bg-slate-200 hover:bg-slate-300 font-bold text-slate-700">+</button><span class="text-xs text-slate-500">px</span></div>
+<div class="flex items-center gap-2"><span class="text-xs text-slate-500 uppercase">Масштаб схемы</span><button type="button" onclick="adjustSixRadViewScale(-0.05)" class="px-3 py-1 rounded-lg bg-slate-200 hover:bg-slate-300 font-bold text-slate-700">−</button><input type="number" id="six-rad-view-scale" value="1.15" min="0.8" max="1.5" step="0.05" class="w-20 power-input text-center" oninput="applySixRadViewScale()"><button type="button" onclick="adjustSixRadViewScale(0.05)" class="px-3 py-1 rounded-lg bg-slate-200 hover:bg-slate-300 font-bold text-slate-700">+</button></div>
+<div class="flex items-center gap-2"><span class="text-xs text-slate-500 uppercase">Поворот крана</span><button type="button" onclick="adjustSixRadValveRotation(-15)" class="px-3 py-1 rounded-lg bg-slate-200 hover:bg-slate-300 font-bold text-slate-700">−</button><input type="range" id="six-rad-valve-rotation" min="0" max="360" value="0" class="w-24" oninput="applySixRadValveRotation()"><span class="text-xs font-mono text-purple-700 w-10" id="six-rad-valve-rotation-val">0°</span><button type="button" onclick="adjustSixRadValveRotation(15)" class="px-3 py-1 rounded-lg bg-slate-200 hover:bg-slate-300 font-bold text-slate-700">+</button></div>
+</div>
+</div>
+<!-- ========== РАСПРЕДЕЛЕНИЕ РАСХОДА ПО СТОЯКУ ========== -->
+<div id="canvas-below-section" class="canvas-container mb-8 mt-6">
+  <canvas id="simCanvasBelow"></canvas>
+</div>
+</div>
+
+<!-- ============================================================ -->
+<!-- БЛОК 3: HTML (РЕЗУЛЬТАТЫ И ПАРАМЕТРЫ РАДИАТОРА)             -->
+<!-- ============================================================ -->
+
+<!-- ========== ВИЗУАЛИЗАЦИЯ (Кран байпаса + Параметры + Canvas) ========== -->
+<div id="visualization-section" style="display:none;">
+<!-- ========== КРАН НА БАЙПАСЕ ========== -->
+<div id="bypass-section" class="bypass-control mb-6">
+<div class="flex flex-col md:flex-row items-center justify-between gap-4">
+<div class="flex items-center gap-4">
+<div class="text-2xl">◆</div>
+<div>
+<div class="text-sm font-bold text-orange-800">КРАН НА БАЙПАСЕ</div>
+<div class="text-xs text-orange-600">Перекройте → весь поток через радиатор</div>
+</div>
+</div>
+<div class="flex-1 max-w-md">
+<div class="flex items-center justify-between mb-2">
+<span class="text-xs text-orange-700">ЗАКРЫТ</span>
+<span class="text-lg font-bold text-orange-800" id="bypass-valve-value">100%</span>
+<span class="text-xs text-orange-700">ОТКРЫТ</span>
+</div>
+<input type="range" id="bypassValve" min="0" max="100" value="100" class="w-full" oninput="updateBypassDisplay(); debouncedRecalc()">
+</div>
+<div class="flex gap-4">
+<div class="flow-indicator bg-orange-100"><span class="text-orange-600">Байпас:</span><span class="font-bold text-orange-800" id="bypass-lpm">--</span></div>
+<div class="flow-indicator bg-green-100"><span class="text-green-600">Радиатор:</span><span class="font-bold text-green-800" id="radiator-lpm">--</span></div>
+</div>
+</div>
+</div>
+
+<!-- ========== ПАРАМЕТРЫ РАДИАТОРА ========== -->
+<div id="radiator-params-section" class="metric-card mb-6">
+<div class="flex flex-wrap items-center justify-between gap-4">
+<div class="flex items-center gap-4 flex-wrap">
+<div>
+<div class="text-xs text-slate-500 uppercase mb-1">Мощность рад.</div>
+<div class="flex items-center gap-2"><input type="number" id="nominalPower" value="2000" min="500" max="5000" step="100" class="power-input" oninput="debouncedRecalc()"><span class="text-slate-600">Вт</span></div>
+</div>
+<div>
+<div class="text-xs text-red-600 uppercase mb-1 font-bold">📉 Теплопотери расч.</div>
+<div class="flex items-center gap-1"><input type="number" id="heatLossDesign" value="1000" min="200" max="10000" step="50" class="power-input border-red-300" oninput="debouncedRecalc()"><span class="text-slate-600">Вт</span></div>
+</div>
+<div>
+<div class="text-xs text-blue-600 uppercase mb-1 font-bold">🌡 t<sub>нар.расч</sub></div>
+<div class="flex items-center gap-1"><input type="number" id="designOutTemp" value="-30" min="-55" max="0" step="1" class="power-input border-blue-300" oninput="debouncedRecalc()"><span class="text-slate-600">°C</span></div>
+</div>
+<div>
+<div class="text-xs text-amber-700 uppercase mb-1 font-bold">🎯 T<sub>комн</sub> желаемая</div>
+<div class="flex items-center gap-1"><input type="number" id="desiredRoomTemp" value="20" min="15" max="28" step="1" class="power-input border-amber-400" oninput="debouncedRecalc()"><span class="text-slate-600">°C</span></div>
+</div>
+</div>
+<div class="flex items-center gap-4 flex-wrap">
+<div>
+<div class="text-xs text-slate-500 uppercase mb-1">Т° подачи</div>
+<div class="flex items-center gap-1"><input type="number" id="supplyTemp" value="70" min="40" max="95" step="1" class="power-input" oninput="debouncedRecalc()"><span class="text-slate-600">°C</span></div>
+</div>
+<div>
+<div class="text-xs text-slate-500 uppercase mb-1">Расход</div>
+<div class="flex items-center gap-1"><input type="number" id="systemFlow" value="4" min="0.5" max="30" step="0.5" class="power-input" oninput="debouncedRecalc()"><span class="text-slate-600">л/мин</span></div>
+</div>
+<div>
+<div class="text-xs text-red-600 uppercase mb-1 font-bold">🌡 Улица факт.</div>
+<div class="flex items-center gap-1"><input type="number" id="outsideTemp" value="-10" min="-55" max="15" step="1" class="power-input border-red-300" oninput="debouncedRecalc()"><span class="text-slate-600">°C</span></div>
+</div>
+<div>
+<div class="text-xs text-green-600 uppercase mb-1">😊 Притоки</div>
+<div class="flex items-center gap-1"><input type="number" id="internalGains" value="0" min="0" max="1000" step="50" class="power-input border-green-300" placeholder="0" title="≈10 Вт/м² для жилых помещений (СП 60.13330)" oninput="debouncedRecalc()"><span class="text-slate-600">Вт</span></div>
+<div class="text-xs text-slate-400 mt-0.5">≈10 Вт/м² для жилых</div>
+</div>
+</div>
+</div>
+<div class="sp-ref mt-3">📋 <strong>СП 60.13330.2020 п.5.8:</strong> K = Q<sub>расч</sub> / (t<sub>вн</sub> − t<sub>нар.расч</sub>) = <strong><span id="kroom-display">--</span> Вт/К</strong> — постоянный коэффициент. Q<sub>пот</sub>(t) = K · (T<sub>комн</sub> − t<sub>ул</sub>) — линейная зависимость.</div>
+<div class="mt-3 text-sm rounded-lg p-3 bg-amber-50 border border-amber-200" id="desired-temp-analysis">
+<strong>🎯 При желаемой T<sub>комн</sub>:</strong> <span id="desired-temp-text">--</span>
+</div>
+</div>
+
+<!-- ============================================================ -->
+<!-- БЛОК 4: HTML (CANVAS, МЕТРИКИ, ФУТЕР)                       -->
+<!-- ============================================================ -->
+
+<!-- ========== РАЗМЕР РАДИАТОРА ========== -->
+<div class="mb-6 rounded-xl border-2 border-slate-200 bg-slate-50 overflow-hidden">
+<button onclick="toggleSizeControls()" id="btn-size-controls" 
+        class="w-full px-4 py-3 text-left mode-btn rounded-none bg-white text-slate-900 border-b-2 border-slate-200 hover:bg-slate-50 transition-all font-semibold">
+    📐 Размеры и позиция
+</button>
+<div id="size-controls-section" class="metric-card mb-0 rounded-none p-4 flex flex-wrap items-center gap-6">
+<div class="flex items-center gap-2">
+<span class="text-xs text-slate-500 uppercase">Ширина</span>
+<button type="button" onclick="adjustRadSize('width', -50)" class="px-3 py-1 rounded-lg bg-slate-200 hover:bg-slate-300 font-bold text-slate-700">−</button>
+<input type="number" id="rad-width" value="1240" min="400" max="1400" step="50" class="w-20 power-input text-center" oninput="applyRadSize()">
+<button type="button" onclick="adjustRadSize('width', 50)" class="px-3 py-1 rounded-lg bg-slate-200 hover:bg-slate-300 font-bold text-slate-700">+</button>
+<span class="text-xs text-slate-500">px</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-xs text-slate-500 uppercase">Высота</span>
+<button type="button" onclick="adjustRadSize('height', -20)" class="px-3 py-1 rounded-lg bg-slate-200 hover:bg-slate-300 font-bold text-slate-700">−</button>
+<input type="number" id="rad-height" value="360" min="200" max="600" step="20" class="w-20 power-input text-center" oninput="applyRadSize()">
+<button type="button" onclick="adjustRadSize('height', 20)" class="px-3 py-1 rounded-lg bg-slate-200 hover:bg-slate-300 font-bold text-slate-700">+</button>
+<span class="text-xs text-slate-500">px</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-xs text-slate-500 uppercase">По горизонтали</span>
+<button type="button" onclick="adjustRadPos('x', -20)" class="px-3 py-1 rounded-lg bg-slate-200 hover:bg-slate-300 font-bold text-slate-700">−</button>
+<input type="number" id="rad-pos-x" value="300" min="285" max="600" step="20" class="w-20 power-input text-center" oninput="applyRadPos()">
+<button type="button" onclick="adjustRadPos('x', 20)" class="px-3 py-1 rounded-lg bg-slate-200 hover:bg-slate-300 font-bold text-slate-700">+</button>
+<span class="text-xs text-slate-500">px</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-xs text-slate-500 uppercase">По вертикали</span>
+<button type="button" onclick="adjustRadPos('y', -20)" class="px-3 py-1 rounded-lg bg-slate-200 hover:bg-slate-300 font-bold text-slate-700">−</button>
+<input type="number" id="rad-pos-y" value="260" min="100" max="400" step="20" class="w-20 power-input text-center" oninput="applyRadPos()">
+<button type="button" onclick="adjustRadPos('y', 20)" class="px-3 py-1 rounded-lg bg-slate-200 hover:bg-slate-300 font-bold text-slate-700">+</button>
+<span class="text-xs text-slate-500">px</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-xs text-slate-500 uppercase">Трубы слева вверх/вниз</span>
+<button type="button" onclick="adjustLeftPipeExt(-20)" class="px-3 py-1 rounded-lg bg-slate-200 hover:bg-slate-300 font-bold text-slate-700">−</button>
+<input type="range" id="left-pipe-ext" min="0" max="300" value="0" step="10" class="w-24" oninput="applyLeftPipeExt()">
+<span class="text-xs text-slate-500 font-mono" id="left-pipe-ext-val">0</span>
+<button type="button" onclick="adjustLeftPipeExt(20)" class="px-3 py-1 rounded-lg bg-slate-200 hover:bg-slate-300 font-bold text-slate-700">+</button>
+<span class="text-xs text-slate-500">px</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-xs text-slate-500 uppercase">Ширина окна</span>
+<button type="button" onclick="adjustCanvasWidth(-50)" class="px-3 py-1 rounded-lg bg-slate-200 hover:bg-slate-300 font-bold text-slate-700">−</button>
+<input type="number" id="canvas-width" value="1600" min="1000" max="2000" step="50" class="w-20 power-input text-center" oninput="applyCanvasWidth()">
+<button type="button" onclick="adjustCanvasWidth(50)" class="px-3 py-1 rounded-lg bg-slate-200 hover:bg-slate-300 font-bold text-slate-700">+</button>
+<span class="text-xs text-slate-500">px</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-xs text-slate-500 uppercase">Высота окна</span>
+<button type="button" onclick="adjustCanvasHeight(-50)" class="px-3 py-1 rounded-lg bg-slate-200 hover:bg-slate-300 font-bold text-slate-700">−</button>
+<input type="number" id="canvas-height" value="850" min="700" max="1050" step="50" class="w-20 power-input text-center" oninput="applyCanvasHeight()">
+<button type="button" onclick="adjustCanvasHeight(50)" class="px-3 py-1 rounded-lg bg-slate-200 hover:bg-slate-300 font-bold text-slate-700">+</button>
+<span class="text-xs text-slate-500">px</span>
+</div>
+</div>
+</div>
+
+<!-- ========== CANVAS ========== -->
+<div id="canvas-section" class="canvas-container mb-8"><canvas id="simCanvas"></canvas></div>
+</div>
+
+<!-- ========== БЛОК: Температура коллектора обратки ========== -->
+<div id="collector-section" class="collector-flow-info mb-6" style="display:none;">
+<div class="text-sm font-bold text-orange-800 mb-2">🔥 ТЕМПЕРАТУРА ВЕРХНЕГО КОЛЛЕКТОРА (обратка)</div>
+<div class="text-xs text-orange-700 mb-2">Горячий теплоноситель из первых секций движется по коллектору обратки к дальним секциям (противоток). Коллектор горячий только там, куда доходят частицы!</div>
+<div id="collector-temps" class="flex flex-wrap gap-2"></div>
+<div class="text-xs text-slate-500 mt-2" id="collector-explanation"></div>
+<div class="text-xs text-orange-600 font-mono mt-2" id="particle-count-info"></div>
+</div>
+
+<!-- ========== МЕТРИКИ ========== -->
+<div id="metrics-section" class="flex flex-row flex-wrap items-center gap-4 mb-8" style="display:none;">
+<div class="metric-card flex items-center gap-2 px-4 py-2"><span class="text-xs text-slate-500 uppercase whitespace-nowrap">Байпас</span><span class="stat-value text-red-500 text-lg" id="bypass-flow">--%</span></div>
+<div class="metric-card flex items-center gap-2 px-4 py-2"><span class="text-xs text-slate-500 uppercase whitespace-nowrap">Радиатор</span><span class="stat-value text-green-500 text-lg" id="radiator-flow">--%</span></div>
+<div class="metric-card flex items-center gap-2 px-4 py-2"><span class="text-xs text-slate-500 uppercase whitespace-nowrap">Мощность</span><span class="stat-value text-orange-500 text-lg" id="real-power">--</span></div>
+<div class="metric-card flex items-center gap-2 px-4 py-2"><span class="text-xs text-slate-500 uppercase whitespace-nowrap">Эффективн.</span><span class="stat-value text-amber-500 text-lg" id="efficiency">--</span></div>
+<div class="metric-card flex items-center gap-2 px-4 py-2"><span class="text-xs text-slate-500 uppercase whitespace-nowrap">Обратка</span><span class="stat-value text-blue-500 text-lg" id="return-temp">--</span></div>
+<div class="metric-card flex items-center gap-2 px-4 py-2"><span class="text-xs text-slate-500 uppercase whitespace-nowrap">ΔT воды</span><span class="stat-value text-purple-500 text-lg" id="delta-t">--</span></div>
+<div class="metric-card flex items-center gap-2 px-4 py-2"><span class="text-xs text-slate-500 uppercase whitespace-nowrap">K<sub>room</sub></span><span class="stat-value text-teal-500 text-lg" id="kroom-card">--</span></div>
+</div>
+
+<!-- ========== СЕКЦИИ ========== -->
+<div id="sections-section" class="metric-card mb-8" style="display:none;">
+<div class="text-sm font-semibold text-slate-700 mb-2">📊 Секции при T<sub>room</sub> = <span id="sections-troom">--</span>°C</div>
+<div id="sections-detail" class="grid grid-cols-2 sm:grid-cols-5 lg:grid-cols-10 gap-3"></div>
+</div>
+
+<!-- ========== АНАЛИЗ ========== -->
+<div id="analysis-section" class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8" style="display:none;">
+<div class="metric-card">
+<div class="text-sm font-semibold text-slate-700 mb-4">🌡 Шкала температур</div>
+<div class="temp-gradient mb-3" id="temp-gradient-bar"></div>
+<div class="flex justify-between text-xs font-mono text-slate-500"><span>🔵 холод</span><span>30°C</span><span>🔴 горячо</span></div>
+</div>
+<div class="metric-card">
+<div class="text-sm font-semibold text-slate-700 mb-3">💡 Анализ</div>
+<div id="physics-explanation" class="text-sm leading-relaxed text-slate-600"></div>
+</div>
+<div class="metric-card">
+<div class="text-sm font-semibold text-slate-700 mb-2">🔄 Сходимость</div>
+<div id="iteration-log" class="iter-log bg-slate-50 rounded-lg p-2"></div>
+</div>
+</div>
+
+<!-- ========== КЛАПАНЫ СЕКЦИЙ ========== -->
+<div id="section-controls-section" class="metric-card mb-8" style="display:none;">
+<div class="text-sm font-semibold text-slate-700 mb-4">⚙ Клапаны секций</div>
+<div id="section-controls" class="grid grid-cols-2 sm:grid-cols-5 lg:grid-cols-10 gap-4"></div>
+</div>
+
+<!-- ========== FOOTER ========== -->
+<footer class="text-center py-6 text-slate-400 text-sm">
+<p>Создатель видео: <a href="https://vk.com/otoplenie44" target="_blank" class="text-indigo-500 font-semibold hover:underline">🏗 Роман Отопление</a></p>
+</footer>
+</div>
+
+<script type="module" src="src/main.ts"></script>
+</body>
+</html>
