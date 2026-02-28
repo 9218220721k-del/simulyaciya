@@ -254,13 +254,6 @@ export function calcRiser(): void {
     VALVE_DATA.ball_valve_34.zeta_open! +
     VALVE_DATA.tee.zeta!;
   const floorHeight = 3.0;
-  const valveC = Math.log(VALVE_DATA.ball_valve_12.zeta_closed! / VALVE_DATA.ball_valve_12.zeta_open!);
-
-  function zetaBypassAtOpenPct(openPct: number): number {
-    const pct = Math.max(0, Math.min(100, openPct));
-    const zetaValve = VALVE_DATA.ball_valve_12.zeta_open! * Math.exp(valveC * (1 - pct / 100));
-    return VALVE_DATA.tee.zeta! + zetaValve + VALVE_DATA.tee.zeta!;
-  }
 
   const estQ = flowLPM / 60000;
   const estD = stoyakD / 1000;
@@ -273,7 +266,7 @@ export function calcRiser(): void {
   const A_bp_riser = Math.PI * Math.pow(bypassD / 2000, 2);
   const A_rad_riser = Math.PI * Math.pow(radPipeD / 2000, 2);
 
-  const K_bp_node_base = A_bp_riser / Math.sqrt(Math.max(zetaBypassOpen, 0.01));
+  const K_bp_node = A_bp_riser / Math.sqrt(Math.max(zetaBypassOpen, 0.01));
   const K_rad_node = A_rad_riser / Math.sqrt(Math.max(zetaRadNode, 0.01));
 
   let totalZetaBase = 0;
@@ -282,21 +275,10 @@ export function calcRiser(): void {
 
   for (let i = 0; i < N; i++) {
     const pipeLoss_zeta = lambdaStoyak * (floorHeight / estD);
-    let K_bp_node: number;
-    let bypassEffectiveOpen: boolean;
-    if (i < 6) {
-      const openPct = st.sixRadBypassOpenPct[i];
-      bypassEffectiveOpen = openPct >= 5;
-      const zetaBp = zetaBypassAtOpenPct(openPct);
-      K_bp_node = A_bp_riser / Math.sqrt(Math.max(zetaBp, 0.01));
-    } else {
-      bypassEffectiveOpen = st.riserBypassOpen[i];
-      K_bp_node = bypassEffectiveOpen ? K_bp_node_base : 0;
-    }
     const zetaNodeOpen = (A_stoyak * A_stoyak) / Math.pow(K_bp_node + K_rad_node, 2);
-    totalZetaBase += (A_stoyak * A_stoyak) / Math.pow(K_bp_node_base + K_rad_node, 2) + pipeLoss_zeta;
+    totalZetaBase += zetaNodeOpen + pipeLoss_zeta;
 
-    if (bypassEffectiveOpen) {
+    if (st.riserBypassOpen[i]) {
       totalZetaCurrent += zetaNodeOpen + pipeLoss_zeta;
     } else {
       const zetaNodeClosed = zetaRadNode * Math.pow(A_stoyak / A_rad_riser, 2);
@@ -333,26 +315,14 @@ export function calcRiser(): void {
   let Tin = Tsupply;
 
   for (let i = 0; i < N; i++) {
-    let K_bp_i: number;
-    let bypassOpen_i: boolean;
-    if (i < 6) {
-      const openPct = st.sixRadBypassOpenPct[i];
-      bypassOpen_i = openPct >= 5;
-      const zetaBp = zetaBypassAtOpenPct(openPct);
-      K_bp_i = A_bp_riser / Math.sqrt(Math.max(zetaBp, 0.01));
-    } else {
-      bypassOpen_i = st.riserBypassOpen[i];
-      K_bp_i = bypassOpen_i ? K_bp_node_base : 0;
-    }
-
     const floor = Math.ceil((N - i) / 2);
     const isSecondOnFloor = (N - i) % 2 === 0;
     let radFlowFraction: number;
 
-    if (!bypassOpen_i) {
+    if (!st.riserBypassOpen[i]) {
       radFlowFraction = 1.0;
     } else {
-      radFlowFraction = K_rad_node / (K_rad_node + K_bp_i);
+      radFlowFraction = K_rad_node / (K_rad_node + K_bp_node);
       radFlowFraction = clamp(radFlowFraction, 0.05, 0.95);
     }
 
@@ -388,7 +358,7 @@ export function calcRiser(): void {
       index: i,
       floor,
       isSecondOnFloor,
-      bypassOpen: bypassOpen_i,
+      bypassOpen: st.riserBypassOpen[i],
       Tin,
       Tout: Tout_node,
       Tout_rad,

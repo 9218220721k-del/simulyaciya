@@ -35,14 +35,6 @@ export let canvasHeight = 850;
 export function setCanvasHeight(v: number): void { canvasHeight = Math.max(700, Math.min(1050, v)); }
 export let canvasWidth = 1600;
 export function setCanvasWidth(v: number): void { canvasWidth = Math.max(1000, Math.min(2000, v)); }
-export let sixRadCanvasWidth = 1600;
-export let sixRadCanvasHeight = 850;
-export let sixRadViewScale = 1.15;
-export let sixRadValveRotationDegrees = 0;
-export function setSixRadCanvasWidth(v: number): void { sixRadCanvasWidth = Math.max(1000, Math.min(2000, v)); }
-export function setSixRadCanvasHeight(v: number): void { sixRadCanvasHeight = Math.max(600, Math.min(1200, v)); }
-export function setSixRadViewScale(v: number): void { sixRadViewScale = Math.max(0.8, Math.min(1.5, v)); }
-export function setSixRadValveRotationDegrees(v: number): void { sixRadValveRotationDegrees = ((v % 360) + 360) % 360; }
 
 export const flowData: FlowData = {
   bypassFrac: 0.5,
@@ -109,21 +101,7 @@ export function setSystemFrozen(v: boolean): void { systemFrozen = v; }
 export function setFreezeWarningShown(v: boolean): void { freezeWarningShown = v; }
 
 export let riserBypassOpen = Array(RISER_RADIATORS).fill(true) as boolean[];
-export let sixRadBypassOpenPct = [100, 100, 100, 100, 100, 100] as number[];
 export let riserResults: RiserResults | null = null;
-
-export interface SixRadParticle {
-  pathT: number;
-  speed: number;
-}
-
-export const sixRadParticles: SixRadParticle[] = [];
-
-export function setSixRadBypassOpenPct(idx: number, pct: number): void {
-  if (idx >= 0 && idx < 6) {
-    sixRadBypassOpenPct[idx] = Math.max(0, Math.min(100, pct));
-  }
-}
 
 export function setRiserResults(r: RiserResults | null): void {
   riserResults = r;
